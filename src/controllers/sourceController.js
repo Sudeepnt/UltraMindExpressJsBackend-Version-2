@@ -7,17 +7,16 @@ const createSource = async (req, res) => {
   const { 
     source_id,           // from app
     category_id,
-    collection_id,       
     source_name, 
     created_at,          
     updated_at           
   } = req.body;
 
   try {
-    // Check for required fields (removed user_id from body check)
-    if (!source_id || !category_id || !collection_id || !source_name) {
+  
+    if (!source_id || !category_id || !source_name) {
       return res.status(400).json({ 
-        error: 'Missing required fields: source_id, category_id, collection_id, source_name' 
+        error: 'Missing required fields: source_id, category_id, source_name' 
       });
     }
 
@@ -27,7 +26,7 @@ const createSource = async (req, res) => {
         source_id: source_id,
         user_id: authenticatedUserId, // ✅ Using the verified Clerk ID
         category_id: category_id,
-        collection_id: collection_id,
+ 
         source_name: source_name,
         created_at: created_at || new Date().toISOString(),
         updated_at: updated_at || new Date().toISOString(),
