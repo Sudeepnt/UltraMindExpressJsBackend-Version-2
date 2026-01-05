@@ -24,13 +24,15 @@ async function parseDateRange(query, referenceDate) {
 
 async function interpretQuery(query, metadata, currentDate) {
   try {
-    const { categories = [], collections = [], sources = [], notes = [] } = metadata;
+ 
+    const { categories = [], sources = [], notes = [] } = metadata;
     
+ 
     const systemPrompt = `You are a query interpreter. Analyze and return JSON:
 
-{"intent":"search|list|count|summary|greeting","filters":{"time_range":"today|this_week|this_month|null","categories":null,"collections":null,"sources":null},"search_terms":"text","needs_embedding":true|false}
+{"intent":"search|list|count|summary|greeting","filters":{"time_range":"today|this_week|this_month|null","categories":null,"sources":null},"search_terms":"text","needs_embedding":true|false}
 
-User has ${notes.length} notes. Categories: ${categories.join(', ')}. Collections: ${collections.join(', ')}. Sources: ${sources.join(', ')}. Today: ${new Date(currentDate).toDateString()}.
+User has ${notes.length} notes. Categories: ${categories.join(', ')}. Sources: ${sources.join(', ')}. Today: ${new Date(currentDate).toDateString()}.
 
 Examples:
 "what did I learn this week" → {"intent":"summary","filters":{"time_range":"this_week"},"needs_embedding":false}
@@ -65,9 +67,10 @@ Examples:
 
 async function getAllUserMetadata(userId) {
   try {
+ 
     const { data: takeawaysData, error } = await supabase
       .from('takeaways')
-      .select('takeaway_id, content, category_id, collection_id, source_id, created_at')
+      .select('takeaway_id, content, category_id, source_id, created_at')
       .eq('user_id', userId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -75,14 +78,14 @@ async function getAllUserMetadata(userId) {
 
     if (error) {
       console.error('Metadata error:', error.message);
-      return { notes: [], categories: [], collections: [], sources: [] };
+      return { notes: [], categories: [], sources: [] };  
     }
 
     const categoryIds = [...new Set(takeawaysData.map(t => t.category_id).filter(Boolean))];
-    const collectionIds = [...new Set(takeawaysData.map(t => t.collection_id).filter(Boolean))];
+    
     const sourceIds = [...new Set(takeawaysData.map(t => t.source_id).filter(Boolean))];
 
-    console.log(`📊 Raw IDs - Collections: ${collectionIds.length}, Categories: ${categoryIds.length}, Sources: ${sourceIds.length}`);
+    console.log(`📊 Raw IDs - Categories: ${categoryIds.length}, Sources: ${sourceIds.length}`);
 
     const { data: categoriesData } = await supabase
       .from('categories')
@@ -90,11 +93,7 @@ async function getAllUserMetadata(userId) {
       .in('category_id', categoryIds.length > 0 ? categoryIds : ['none'])
       .eq('is_deleted', false);
 
-    const { data: collectionsData } = await supabase
-      .from('collections')
-      .select('collection_id, collection_name')
-      .in('collection_id', collectionIds.length > 0 ? collectionIds : ['none'])
-      .eq('is_deleted', false);
+ 
 
     const { data: sourcesData } = await supabase
       .from('sources')
@@ -103,7 +102,7 @@ async function getAllUserMetadata(userId) {
       .eq('is_deleted', false);
 
     const categoryMap = new Map((categoriesData || []).map(c => [c.category_id, c.category_name]));
-    const collectionMap = new Map((collectionsData || []).map(c => [c.collection_id, c.collection_name]));
+   
     const sourceMap = new Map((sourcesData || []).map(s => [s.source_id, s.source_name]));
 
     const notes = takeawaysData.map(row => ({
@@ -111,21 +110,21 @@ async function getAllUserMetadata(userId) {
       content: row.content,
       created_at: row.created_at,
       category_name: categoryMap.get(row.category_id) || null,
-      collection_name: collectionMap.get(row.collection_id) || null,
+ 
       source_name: sourceMap.get(row.source_id) || null
     }));
 
     const categories = [...new Set([...categoryMap.values()])];
-    const collections = [...new Set([...collectionMap.values()])];
+ 
     const sources = [...new Set([...sourceMap.values()])];
 
-    console.log(`📊 Final - ${categories.length} categories, ${collections.length} collections, ${sources.length} sources`);
+    console.log(`📊 Final - ${categories.length} categories, ${sources.length} sources`);
 
-    return { notes, categories, collections, sources };
+    return { notes, categories, sources };
 
   } catch (error) {
     console.error('Metadata error:', error.message);
-    return { notes: [], categories: [], collections: [], sources: [] };
+    return { notes: [], categories: [], sources: [] };
   }
 }
 
@@ -202,7 +201,7 @@ async function searchTakeaways(userId, query, contextFilter, history, currentDat
         metadata: {
           created_at: n.created_at,
           category_name: n.category_name,
-          collection_name: n.collection_name,
+    
           source_name: n.source_name
         },
         similarity: 1.0
@@ -225,7 +224,8 @@ async function searchTakeaways(userId, query, contextFilter, history, currentDat
 
 async function generateAnswer(query, context, metadata, interpretation, history, currentDate) {
   try {
-    const { categories = [], collections = [], sources = [], notes = [] } = metadata;
+ 
+    const { categories = [], sources = [], notes = [] } = metadata;
     
     console.log(`🤖 Answer: ${context?.length || 0} results`);
     
@@ -242,7 +242,7 @@ async function generateAnswer(query, context, metadata, interpretation, history,
 
     const systemPrompt = `You are Ultra Mynd AI - intelligent notes assistant.
 
-Database: ${notes.length} notes, ${categories.length} categories, ${collections.length} collections, ${sources.length} sources.
+Database: ${notes.length} notes, ${categories.length} categories, ${sources.length} sources.
 Today: ${new Date(currentDate).toDateString()}
 
 FORMATTING RULES:
@@ -263,7 +263,7 @@ When listing notes from time periods, ALWAYS format like:
       userMessage += `TIME FILTER: ${interpretation.filters.time_range} - SHOW DATES IN BRACKETS!\n`;
     }
     userMessage += `\nCategories: ${categories.join(', ') || 'None'}\n`;
-    userMessage += `Collections: ${collections.join(', ') || 'None'}\n`;
+    
     userMessage += `Sources: ${sources.join(', ') || 'None'}\n\n`;
     
     if (context && context.length > 0) {
@@ -273,9 +273,9 @@ When listing notes from time periods, ALWAYS format like:
           ? new Date(n.metadata.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           : 'Recent';
         const cat = n.metadata?.category_name || 'Uncategorized';
-        const col = n.metadata?.collection_name || 'No collection';
+  
         const src = n.metadata?.source_name || 'Unknown';
-        return `${i + 1}. [${date}] ${cat} > ${col} | ${src}\n"${n.content}"`;
+        return `${i + 1}. [${date}] ${cat} | ${src}\n"${n.content}"`;
       }).join('\n\n');
       userMessage += notesList;
     } else {
