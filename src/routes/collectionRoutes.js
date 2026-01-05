@@ -1,0 +1,9 @@
+const express =require('express');
+const router =express.Router();
+const {createCollection } = require("../controllers/collectionController");
+
+
+router.post('/createCollection',createCollection)
+
+module.exports =router;
+
