@@ -1,4 +1,4 @@
-const chrono = require('chrono-node');
+ const chrono = require('chrono-node');
 
 function parseQuery(queryText, referenceDate) {
   if (!queryText || queryText.trim() === '') {
@@ -45,3 +45,4 @@ function parseQuery(queryText, referenceDate) {
 }
 
 module.exports = { parseQuery };
+
