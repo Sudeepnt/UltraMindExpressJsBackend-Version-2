@@ -66,8 +66,8 @@ router.post('/query', verifySubscription, async (req, res) => {
       metadata: {
         created_at: r.metadata?.created_at || null,
         source_name: r.metadata?.source_name || null,
-        category_name: r.metadata?.category_name || null,
-        collection_name: r.metadata?.collection_name || null
+        category_name: r.metadata?.category_name || null
+  
       },
       similarity: Number(r.similarity) || 0.0
     }));
