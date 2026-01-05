@@ -9,14 +9,14 @@ const createTakeaway = async (req, res) => {
     takeaway_id,     // from app
     category_id, 
     source_id, 
-    collection_id,   
+ 
     content,
     created_at,      // from app
     updated_at       // from app
   } = req.body;
 
   try {
-    // Validate required fields (Removed user_id from body check)
+    // Validate required fields
     if (!takeaway_id || !content) {
       return res.status(400).json({ 
         error: 'Missing required fields: takeaway_id, content' 
@@ -39,7 +39,7 @@ const createTakeaway = async (req, res) => {
         user_id: authenticatedUserId, // ✅ Using verified Clerk ID
         category_id: category_id,
         source_id: source_id || null,
-        collection_id: collection_id || null,
+      
         content: content,
         created_at: created_at || new Date().toISOString(),
         updated_at: updated_at || new Date().toISOString(),
