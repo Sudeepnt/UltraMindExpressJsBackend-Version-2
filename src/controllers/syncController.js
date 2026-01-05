@@ -19,7 +19,7 @@ exports.syncData = async (req, res) => {
 
     if (changes?.tags?.length > 0) await syncTags(clerkUserId, changes.tags);
     if (changes?.categories?.length > 0) await syncCategories(clerkUserId, changes.categories);
-    if (changes?.collections?.length > 0) await syncCollections(clerkUserId, changes.collections);
+ 
     if (changes?.sources?.length > 0) await syncSources(clerkUserId, changes.sources);
     if (changes?.takeaways?.length > 0) await syncTakeaways(clerkUserId, changes.takeaways);
     if (changes?.takeaway_tags?.length > 0) await syncTakeawayTags(clerkUserId, changes.takeaway_tags);
@@ -65,18 +65,13 @@ async function syncCategories(user_id, categories) {
   await supabase.from('categories').upsert(data, { onConflict: 'category_id' });
 }
 
-async function syncCollections(user_id, collections) {
-  const data = collections.map(c => ({
-    collection_id: c.collectionid, user_id, category_id: c.categoryid,
-    collection_name: c.collectionname, is_deleted: c.isdeleted, updated_at: toDbTime(c.updatedat)
-  }));
-  await supabase.from('collections').upsert(data, { onConflict: 'collection_id' });
-}
+ 
  
 async function syncSources(user_id, sources) {
   const data = sources.map(s => ({
     source_id: s.sourceid, user_id, category_id: s.categoryid,
-    collection_id: s.collectionid || null, source_name: s.sourcename,
+ 
+    source_name: s.sourcename,
     is_deleted: s.isdeleted, updated_at: toDbTime(s.updatedat)
   }));
   await supabase.from('sources').upsert(data, { onConflict: 'source_id' });
@@ -87,7 +82,7 @@ async function syncTakeaways(user_id, takeaways) {
     takeaway_id: t.takeawayid, 
     user_id, 
     category_id: t.categoryid,
-    collection_id: t.collectionid || null,  // ✅ ADDED THIS!
+ 
     source_id: t.sourceid || null, 
     content: t.content,
     is_deleted: t.isdeleted, 
@@ -106,10 +101,9 @@ async function syncTakeawayTags(user_id, items) {
 
 async function getServerChanges(user_id, lastSynced) {
   const lastSyncISO = toDbTime(lastSynced || 0);
-  
-  const [cat, col, src, tak, tags, takTags] = await Promise.all([
+ 
+  const [cat, src, tak, tags, takTags] = await Promise.all([
     supabase.from('categories').select('*').eq('user_id', user_id).gt('updated_at', lastSyncISO),
-    supabase.from('collections').select('*').eq('user_id', user_id).gt('updated_at', lastSyncISO),
     supabase.from('sources').select('*').eq('user_id', user_id).gt('updated_at', lastSyncISO),
     supabase.from('takeaways').select('*').eq('user_id', user_id).gt('updated_at', lastSyncISO),
     supabase.from('tags').select('*').eq('user_id', user_id).gt('updated_at', lastSyncISO),
@@ -123,17 +117,10 @@ async function getServerChanges(user_id, lastSynced) {
       isdeleted: c.is_deleted, 
       updatedat: String(toAppTime(c.updated_at)) 
     })),
-    collections: col.data?.map(c => ({ 
-      collectionid: c.collection_id, 
-      categoryid: c.category_id, 
-      collectionname: c.collection_name, 
-      isdeleted: c.is_deleted, 
-      updatedat: String(toAppTime(c.updated_at)) 
-    })),
+   
     sources: src.data?.map(s => ({ 
       sourceid: s.source_id, 
       categoryid: s.category_id, 
-      collectionid: s.collection_id, 
       sourcename: s.source_name, 
       isdeleted: s.is_deleted, 
       updatedat: String(toAppTime(s.updated_at)) 
@@ -142,7 +129,6 @@ async function getServerChanges(user_id, lastSynced) {
       takeawayid: t.takeaway_id, 
       content: t.content, 
       categoryid: t.category_id, 
-      collectionid: t.collection_id,  // ✅ ADDED THIS!
       sourceid: t.source_id, 
       isdeleted: t.is_deleted, 
       updatedat: String(toAppTime(t.updated_at)) 
