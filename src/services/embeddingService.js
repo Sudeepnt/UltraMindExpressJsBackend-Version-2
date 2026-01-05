@@ -19,6 +19,7 @@ async function generateEmbedding(text) {
 
 async function embedTakeaway(takeawayId, userId) {
   try {
+  
     const { data: takeaway, error: fetchError } = await supabase
       .from('takeaways')
       .select(`
@@ -27,10 +28,8 @@ async function embedTakeaway(takeawayId, userId) {
         created_at,
         category_id,
         source_id,
-        collection_id,
         categories ( category_name ),
-        sources ( source_name ),
-        collections ( collection_name )
+        sources ( source_name )
       `)
       .eq('takeaway_id', takeawayId)
       .eq('user_id', userId)
@@ -48,15 +47,17 @@ async function embedTakeaway(takeawayId, userId) {
 
     const categoryName = takeaway.categories?.category_name || 'Uncategorized';
     const sourceName = takeaway.sources?.source_name || 'Unknown Source';
-    const collectionName = takeaway.collections?.collection_name || 'No Collection';
+    
+ 
 
     const createdAtDate = takeaway.created_at ? new Date(takeaway.created_at) : null;
     const createdAtISO = createdAtDate ? createdAtDate.toISOString() : null;
     const dateStr = createdAtDate ? createdAtDate.toDateString() : 'Unknown Date';
 
+    // 3. Updated text context (Category / Source)
     const textToEmbed =
       `Date: ${dateStr}. ` +
-      `Context: ${categoryName} / ${collectionName} / ${sourceName}. ` +
+      `Context: ${categoryName} / ${sourceName}. ` +
       `Content: ${takeaway.content}`;
 
     const embedding = await generateEmbedding(textToEmbed);
@@ -68,6 +69,7 @@ async function embedTakeaway(takeawayId, userId) {
       .eq('takeaway_id', takeawayId)
       .maybeSingle();
 
+ 
     const payload = {
       takeaway_id: takeawayId,
       user_id: userId,
@@ -78,10 +80,8 @@ async function embedTakeaway(takeawayId, userId) {
         created_at: createdAtISO,
         category_id: takeaway.category_id,
         source_id: takeaway.source_id,
-        collection_id: takeaway.collection_id,
         category_name: categoryName,
-        source_name: sourceName,
-        collection_name: collectionName
+        source_name: sourceName
       }
     };
 
